@@ -115,6 +115,7 @@ contract TokenExchange {
         if (tokenBalances[msg.sender][_token] < _amount) throw;
         if(!Token(_token).transfer(msg.sender, _amount)) throw;
         
+        
     }
     
     function getTokenBalance(address _owner, address _token) returns (uint balance) {
