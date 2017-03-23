@@ -1,0 +1,154 @@
+pragma solidity ^0.4.0;
+import "Token.sol";
+
+contract Politicoin {
+    
+    uint256 public totalSupply;
+    uint256 public costPerVote;
+    
+    string[] public candidates;
+    
+    /* every user is mapped to a balance */
+    mapping (address => uint256) public balanceOf;
+    mapping (address => mapping (address => uint256)) public allowance;
+    mapping (string => uint256) public votes; 
+    
+    /* Initialize contract with some initial supply */
+    function Politicoin(uint256 initialSupply) {
+        balanceOf[msg.sender] = initialSupply;
+        totalSupply = initialSupply;
+        costPerVote = 1;
+    }
+    
+    function totalSupply() constant returns (uint256 totalSupply) {
+        return totalSupply;
+    }
+    
+    function balanceOf(address _owner) constant returns (uint256 balance){
+        return balanceOf[_owner];
+    }
+    
+    function transfer(address receiver, uint256 value) returns (bool success){
+        
+        if (balanceOf[msg.sender] < value) {
+            throw;
+        }
+        balanceOf[msg.sender] = balanceOf[msg.sender] - value;
+        balanceOf[receiver] = balanceOf[receiver] + value;
+        return true;
+    }
+    
+    function TransferFrom(address _from, address _to, uint256 _value) 
+    returns (bool success) {
+        if (balanceOf[_from] < _value) {throw;}
+        if (allowance[_from][_to] < _value) {throw;}
+        balanceOf[_from] -= _value;
+        balanceOf[_to] += _value;
+        allowance[_from][_to] -= _value;
+        return true;
+    }
+    
+    function approve(address _spender, uint256 _value) returns (bool success) {
+        if (balanceOf[msg.sender] < _value) {throw;}
+        allowance[msg.sender][_spender] = _value;
+        return true;
+    }
+    
+    function allowance(address _owner, address _spender) 
+    returns (uint256 money) {
+        money = allowance[_owner][_spender];
+        return money;
+    }
+    
+    function vote(string candidate, uint256 _votes) returns (bool success) {
+        if (balanceOf[msg.sender] < (costPerVote*_votes)) {
+            throw;
+        }
+        votes[candidate] += _votes;
+        balanceOf[msg.sender] -= (costPerVote*_votes);
+        return true;
+    }
+    
+    function numVotes(string option) returns (uint256 vote){
+        vote = votes[option];
+        return vote;
+    }
+    
+    function topOption() returns (string winner) {
+        uint256 x = candidates.length;
+        winner = candidates[0];
+        for(uint256 i = 1; i < x; i++) {
+            if (votes[candidates[i]] > votes[winner]) {
+                winner = candidates[i];
+            }
+        }
+        return winner;
+    }
+    
+}
+
+contract TokenExchange {
+    
+    struct TokenBalance {
+        uint numTokens;
+        uint price;
+    }
+    
+    mapping (address => uint) etherBalance;
+    mapping (address => mapping (address => TokenBalance)) tokenBalances;
+    
+    modifier ownsTokens(address _owner, address _token) {
+        if (tokenBalances[_owner][_token].numTokens == 0) {
+            throw;
+        }
+        _;
+    }
+    
+    function depositToken(address _token, uint _amount) {
+        Token(_token).approve(this, _amount);
+        if (!Token(token).transferFrom(msg.sender, this, amount)) throw;
+        tokenBalances[msg.sender][_token] += _amount;
+    }
+    
+    function withdrawToken(address _token, uint _amount) {
+        
+        if (tokenBalances[msg.sender][_token] < _amount) throw;
+        if(!Token(_token).transfer(msg.sender, _amount)) throw;
+        
+    }
+    
+    function getTokenBalance(address _owner, address _token) returns (uint balance) {
+        balance = tokenBalances[_owner][_token].numTokens;
+        return balance;
+    }
+    
+    function setPrice(address _token, uint _price) {
+        if (_price < 0) {
+            throw;
+        }
+        tokenBalances[msg.sender][_token].price = _price;
+    }
+    
+    function buyToken(address _token, address _seller, uint _amount) payable {
+        
+        if(tokenBalances[_seller][_token] < _amount) throw;
+        price = tokenBalances[msg.sender][_token].price;
+        if(etherBalance[msg.sender] < _amount*price) throw;
+        
+        etherBalance[msg.sender] -= _amount*price;
+        etherBalance[_seller] += _amount*price;
+        
+        tokenBalances[msg.sender][_token].numTokens += _amount;
+        tokenBalances[_seller][_token].numTokens -= _amount;
+        
+    }
+    
+    function withdrawEther(uint _amount) {
+        
+        if(etherBalance[msg.sender] < _amount) throw;
+        if (!msg.sender.send(_amount)) throw;
+        etherBalance[msg.sender] -= _amount;
+        
+    }
+    
+}
