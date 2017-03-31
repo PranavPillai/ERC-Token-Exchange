@@ -50,6 +50,7 @@ contract TokenExchange {
     }
     
     function depositToken(address _token, uint _amount) {
+        Token token = new Token();
         Token(_token).approve(this, _amount);
         if (!Token(_token).transferFrom(msg.sender, this, _amount)) throw;
         tokenBalances[msg.sender][_token].numTokens += _amount;
@@ -58,8 +59,8 @@ contract TokenExchange {
     function withdrawToken(address _token, uint _amount) {
         
         if (tokenBalances[msg.sender][_token].numTokens < _amount) throw;
+        tokenBalances[msg.sender][_token].numTokens -= _amount;
         if(!Token(_token).transfer(msg.sender, _amount)) throw;
-        
         
     }
     
@@ -77,22 +78,22 @@ contract TokenExchange {
     
     function buyToken(address _token, address _seller, uint _amount) payable {
         
-        if(msg.value < 0) throw;
+        if(msg.value == 0 || msg.value < price*_amount) throw;
+        if (tokenBalances[msg.sender][_token].price == 0) throw;
+        if (tokenBalances[_seller][_token].numTokens < _amount) throw;
         uint price = tokenBalances[msg.sender][_token].price;
-        if(msg.value < price*_amount) throw;
-        msg.value -= price*_amount;
         etherBalance[_seller] += _amount*price;
         
         tokenBalances[msg.sender][_token].numTokens += _amount;
         tokenBalances[_seller][_token].numTokens -= _amount;
-        
+        if(!msg.sender.send(msg.value - price*_amount)) throw;
     }
     
     function withdrawEther(uint _amount) {
         
         if(etherBalance[msg.sender] < _amount) throw;
-        if (!msg.sender.send(_amount)) throw;
         etherBalance[msg.sender] -= _amount;
+        if (!msg.sender.send(_amount)) throw;
         
     }
     
