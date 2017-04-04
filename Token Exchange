@@ -50,8 +50,9 @@ contract TokenExchange {
     }
     
     function depositToken(address _token, uint _amount) {
-        Token(_token).approve(this, _amount);
+        Token(_token).approve(msg.sender, _amount);
         if (!Token(_token).transferFrom(msg.sender, this, _amount)) throw;
+        tokenBalances[msg.sender][_token] += _amount;
     }
     
     function withdrawToken(address _token, uint _amount) {
